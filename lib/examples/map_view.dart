@@ -11,11 +11,17 @@ class MapView extends StatefulWidget {
   State<MapView> createState() => _MapViewState();
 }
 
-class _MapViewState extends State<MapView> {
+class _MapViewState extends State<MapView> with TickerProviderStateMixin {
   CameraPosition? _cameraPosition;
   CameraPosition? _tempCameraPosition;
   bool _moving = false;
   GoogleMapController? _controller;
+
+  late AnimationController _animationController;
+  late Animation<Offset> _offsetAnimation;
+
+  late AnimationController _animationController2;
+  late Animation<Offset> _offsetAnimation2;
 
   Future<bool> _determinePosition() async {
     bool serviceEnabled;
@@ -59,7 +65,46 @@ class _MapViewState extends State<MapView> {
     return true;
   }
 
+  void setupAnimation() {
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 100),
+      reverseDuration: const Duration(milliseconds: 200),
+    );
+    _offsetAnimation = Tween<Offset>(
+      begin: Offset.zero,
+      end: const Offset(0, -0.15),
+    ).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: const Interval(0.0, 1, curve: Curves.bounceIn),
+        reverseCurve: const Interval(0.0, 1, curve: Curves.bounceIn),
+      ),
+    );
+
+    _animationController2 = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 50),
+      reverseDuration: const Duration(milliseconds: 100),
+    );
+
+    _offsetAnimation2 = Tween<Offset>(
+      begin: Offset.zero,
+      end: const Offset(0, 0.5),
+    ).animate(
+      CurvedAnimation(
+        parent: _animationController2,
+        curve: const Interval(0.0, 1, curve: Curves.bounceIn),
+        reverseCurve: const Interval(0.0, 1, curve: Curves.bounceIn),
+      ),
+    );
+  }
+
   Future<void> init() async {
+    setupAnimation();
+
+    //
+
     final allowLocation = await _determinePosition();
 
     if (allowLocation) {
@@ -78,11 +123,14 @@ class _MapViewState extends State<MapView> {
   @override
   void initState() {
     super.initState();
+
     init();
   }
 
   @override
   void dispose() {
+    _animationController.dispose();
+    _animationController2.dispose();
     super.dispose();
   }
 
@@ -107,22 +155,65 @@ class _MapViewState extends State<MapView> {
                         setState(() {
                           _moving = false;
                         });
+
+                        _animationController.reverse();
+                        _animationController2.reverse();
                       },
                       onCameraMoveStarted: () {
                         setState(() {
                           _moving = true;
                         });
+
+                        _animationController.forward();
+                        _animationController2.forward();
                       },
                       onCameraMove: (pos) {
                         _tempCameraPosition = pos;
                       },
-
                       myLocationEnabled: false,
                       myLocationButtonEnabled: false,
                     ),
 
-                    LocationIcon(),
-                    DotIcon(),
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        ignoring: true,
+                        child: Center(
+                          child: Container(
+                            decoration: BoxDecoration(),
+                            child: SlideTransition(
+                              position: _offsetAnimation,
+                              child: Transform.translate(
+                                offset: Offset(0, -30),
+                                child: Icon(
+                                  Icons.location_on,
+                                  size: 60,
+                                  color: Colors.red,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        ignoring: true,
+                        child: Center(
+                          child: SlideTransition(
+                            position: _offsetAnimation2,
+                            child: Transform.translate(
+                              offset: Offset(0, -1.5),
+                              child: Container(
+                                height: 3,
+                                width: 3,
+                                decoration: BoxDecoration(color: Colors.red),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
 
                     Positioned(
                       bottom: 50,
@@ -167,16 +258,14 @@ class DotIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Positioned.fill(
-      child: IgnorePointer(
-        ignoring: true,
-        child: Center(
-          child: Container(
-            decoration: BoxDecoration(color: Colors.red.withValues(alpha: 1)),
-            child: Transform.translate(
-              offset: Offset(0, -1.5),
-              child: SizedBox(height: 3, width: 3),
-            ),
+    return IgnorePointer(
+      ignoring: true,
+      child: Center(
+        child: Container(
+          decoration: BoxDecoration(color: Colors.red.withValues(alpha: 1)),
+          child: Transform.translate(
+            offset: Offset(0, -1.5),
+            child: SizedBox(height: 3, width: 3),
           ),
         ),
       ),
@@ -189,17 +278,15 @@ class LocationIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Positioned.fill(
-      child: IgnorePointer(
-        ignoring: true,
-        child: Center(
-          child: Container(
-            decoration: BoxDecoration(),
+    return IgnorePointer(
+      ignoring: true,
+      child: Center(
+        child: Container(
+          decoration: BoxDecoration(),
 
-            child: Transform.translate(
-              offset: Offset(0, -30),
-              child: Icon(Icons.location_on, size: 60, color: Colors.red),
-            ),
+          child: Transform.translate(
+            offset: Offset(0, -30),
+            child: Icon(Icons.location_on, size: 60, color: Colors.red),
           ),
         ),
       ),

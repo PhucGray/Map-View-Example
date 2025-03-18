@@ -1,3 +1,7 @@
+# Demo
+
+![](demo.gif)
+
 # Setup
 
 ## Change fvm flutter version
